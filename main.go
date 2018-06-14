@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"github.com/gorilla/mux"
-	db "github.com/SArtemJ/GoStreamControlAPI/Database"
-	m "github.com/SArtemJ/GoStreamControlAPI/Model"
+	db "github.com/SArtemJ/GoStreamControlAPI/database"
+	m "github.com/SArtemJ/GoStreamControlAPI/model"
 )
 
 //show all

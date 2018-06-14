@@ -1,10 +1,10 @@
-package Database
+package database
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
-	m "github.com/SArtemJ/GoStreamControlAPI/Model"
+	m "github.com/SArtemJ/GoStreamControlAPI/model"
 	_ "github.com/lib/pq"
 )
 
