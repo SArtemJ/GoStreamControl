@@ -10,19 +10,17 @@ import (
 	"strconv"
 	"flag"
 	"time"
-	"log"
 )
 
 var (
-	TimerValue *time.Duration
+	TimerValue *int
 	Timer *time.Timer
 )
 
 
 func init() {
-	TimerValue = flag.Duration("t", 10, "to wait in interrupt status")
+	TimerValue = flag.Int("t", 10, "to wait in interrupt status")
 	flag.Parse()
-	log.Println(TimerValue)
 	Timer = time.NewTimer(time.Second * time.Duration(*TimerValue))
 }
 

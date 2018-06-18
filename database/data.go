@@ -44,8 +44,6 @@ func SelectAll(pn int, ps int) ([]m.Stream, bool) {
 			log.Println(err.Error())
 		}
 		allStreams = append(allStreams, s)
-		log.Println("Get All\n")
-		log.Println(len(allStreams))
 	}
 
 	if validData, logic := validationPageSize(pn, ps, allStreams); logic {
