@@ -8,7 +8,19 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"flag"
+	"time"
+	"log"
 )
+
+var TimerValue *time.Duration
+
+
+func init() {
+	TimerValue = flag.Duration("t", 10, "to wait in interrupt status")
+	flag.Parse()
+	log.Println(TimerValue)
+}
 
 //show all
 func ShowAllStreams(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +58,8 @@ func ActivateStream(w http.ResponseWriter, r *http.Request) {
 func InterruptStream(w http.ResponseWriter, r *http.Request) {
 	stream := mux.Vars(r)["id"]
 	UpdateStream(w, stream, "i")
+
+	go finishByTimer(w, stream)
 }
 
 //set finished
@@ -66,9 +80,9 @@ func main() {
 	http.ListenAndServe(":8000", router)
 }
 
-func UpdateStream(w http.ResponseWriter, id string, status string) {
+func UpdateStream(w http.ResponseWriter, streamID string, status string) {
 
-	if sDB, check := db.CheckFromDB(id); check {
+	if sDB, check := db.CheckFromDB(streamID); check {
 		if name, success := sDB.UpdateStatus(status); success {
 			w.WriteHeader(http.StatusOK)
 			resultString := "Stream status update on " + name
@@ -79,4 +93,10 @@ func UpdateStream(w http.ResponseWriter, id string, status string) {
 		w.WriteHeader(http.StatusBadRequest)
 		io.WriteString(w, "Stream update - error - check stream ID or Status name")
 	}
+}
+
+func finishByTimer(w http.ResponseWriter, streamID string) {
+	timer := time.NewTimer(time.Second * time.Duration(*TimerValue))
+	<- timer.C
+	UpdateStream(w, streamID, "f")
 }
