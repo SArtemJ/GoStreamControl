@@ -26,17 +26,21 @@ func NewStream() *Stream {
 }
 
 func (mS *Stream) UpdateStatus(status string) (string, bool) {
-	switch status {
-	case "a":
-		mS.Status = "Active"
-		return "Active", true
-	case "i":
-		mS.Status = "Interrupted"
-		return "Interrupted", true
-	case "f":
-		mS.Status = "Finished"
-		return "Finished", true
-	default:
+	if mS.Status != "Finished" {
+		switch status {
+		case "a":
+			mS.Status = "Active"
+			return "Active", true
+		case "i":
+			mS.Status = "Interrupted"
+			return "Interrupted", true
+		case "f":
+			mS.Status = "Finished"
+			return "Finished", true
+		default:
+			return "", false
+		}
+	} else {
 		return "", false
 	}
 }
