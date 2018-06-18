@@ -1,6 +1,8 @@
 package model
 
-import "github.com/satori/go.uuid"
+import (
+	"github.com/satori/go.uuid"
+)
 
 // Created
 // Active
@@ -23,16 +25,20 @@ func NewStream() *Stream {
 	return stream
 }
 
-func (mS *Stream) Active() {
-	mS.Status = "Active"
-}
-
-func (mS *Stream) Interrupt() {
-	mS.Status = "Interrupted"
-}
-
-func (mS *Stream) Finish() {
-	mS.Status = "Finished"
+func (mS *Stream) UpdateStatus(status string) (string, bool) {
+	switch status {
+	case "a":
+		mS.Status = "Active"
+		return "Active", true
+	case "i":
+		mS.Status = "Interrupted"
+		return "Interrupted", true
+	case "f":
+		mS.Status = "Finished"
+		return "Finished", true
+	default:
+		return "", false
+	}
 }
 
 func (mS *Stream) Delete(uuidT uuid.UUID) {
