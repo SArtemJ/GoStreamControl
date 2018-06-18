@@ -13,13 +13,17 @@ import (
 	"log"
 )
 
-var TimerValue *time.Duration
+var (
+	TimerValue *time.Duration
+	Timer *time.Timer
+)
 
 
 func init() {
 	TimerValue = flag.Duration("t", 10, "to wait in interrupt status")
 	flag.Parse()
 	log.Println(TimerValue)
+	Timer = time.NewTimer(time.Second * time.Duration(*TimerValue))
 }
 
 //show all
@@ -52,6 +56,7 @@ func StartNewStream(w http.ResponseWriter, r *http.Request) {
 func ActivateStream(w http.ResponseWriter, r *http.Request) {
 	stream := mux.Vars(r)["id"]
 	UpdateStream(w, stream, "a")
+	Timer.Stop()
 }
 
 //set interrupted
@@ -96,7 +101,6 @@ func UpdateStream(w http.ResponseWriter, streamID string, status string) {
 }
 
 func finishByTimer(w http.ResponseWriter, streamID string) {
-	timer := time.NewTimer(time.Second * time.Duration(*TimerValue))
-	<- timer.C
+	<- Timer.C
 	UpdateStream(w, streamID, "f")
 }
