@@ -1,11 +1,9 @@
-package database
+package libstream
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
-	m "github.com/SArtemJ/GoStreamControlAPI/model"
-	_ "github.com/lib/pq"
 )
 
 var (
@@ -28,8 +26,8 @@ func init() {
 	//defer DB.Close()
 }
 
-func SelectAll(pn int, ps int) ([]m.Stream, bool) {
-	var allStreams []m.Stream
+func SelectAll(pn int, ps int) ([]Stream, bool) {
+	var allStreams []Stream
 
 	rows, err := DB.Query("SELECT * FROM stream")
 	if err != nil {
@@ -38,7 +36,7 @@ func SelectAll(pn int, ps int) ([]m.Stream, bool) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var s m.Stream
+		var s Stream
 		err := rows.Scan(&s.ID, &s.Status)
 		if err != nil {
 			log.Println(err.Error())
@@ -52,7 +50,7 @@ func SelectAll(pn int, ps int) ([]m.Stream, bool) {
 	return nil, false
 }
 
-func InsertToDB(s *m.Stream) bool {
+func InsertToDB(s *Stream) bool {
 	stringQ := "INSERT INTO stream (id, status) VALUES ($1, $2)"
 	_, err := DB.Exec(stringQ, s.ID, s.Status)
 	if err != nil {
@@ -62,7 +60,7 @@ func InsertToDB(s *m.Stream) bool {
 	return true
 }
 
-func DeleteFromDB(s *m.Stream) bool {
+func DeleteFromDB(s *Stream) bool {
 	stringQ := "DELETE FROM stream WHERE id = $1"
 	_, err := DB.Exec(stringQ, s.ID)
 	if err != nil {
@@ -72,7 +70,7 @@ func DeleteFromDB(s *m.Stream) bool {
 	return true
 }
 
-func validationPageSize(number int, size int, sliceData []m.Stream) ([]m.Stream, bool) {
+func validationPageSize(number int, size int, sliceData []Stream) ([]Stream, bool) {
 	startFromSlice := number * size
 	endFromSlice := size * (number + 1)
 	if startFromSlice < len(sliceData) && (endFromSlice < len(sliceData) && endFromSlice > startFromSlice) {
@@ -81,9 +79,9 @@ func validationPageSize(number int, size int, sliceData []m.Stream) ([]m.Stream,
 	return nil, false
 }
 
-func CheckFromDB(streamID string) (m.Stream, bool) {
+func CheckFromDB(streamID string) (Stream, bool) {
 
-	var stream m.Stream
+	var stream Stream
 	stringQ := "SELECT * FROM stream WHERE id = $1"
 
 	log.Println(stringQ)
@@ -100,7 +98,7 @@ func CheckFromDB(streamID string) (m.Stream, bool) {
 	}
 }
 
-func UpdateRow(s m.Stream) bool {
+func UpdateRow(s Stream) bool {
 	stringQ := "UPDATE stream SET status = $2 WHERE id = $1"
 	_, err := DB.Exec(stringQ, s.ID, s.Status)
 	if err != nil {
