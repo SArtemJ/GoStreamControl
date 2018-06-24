@@ -3,20 +3,38 @@ package libstream
 import (
 	"github.com/spf13/viper"
 	"github.com/spf13/cobra"
-	"github.com/gorilla/mux"
-	"net/http"
+	"strings"
+	"go.uber.org/zap"
+	"fmt"
+	"database/sql"
+	"time"
+	_ "github.com/lib/pq"
 )
 
-//const (
-//	APP_NAME string = "stream"
-//)
+const (
+	AppName = "stream"
+)
+
+var (
+	DB     *sql.DB
+	Logger = zap.S()
+)
 
 type Application struct {
+	cfg    *viper.Viper
+	Server *StreamServer
 
-	cfg *viper.Viper
+	configFile string
 
-	interruptTimer int
-	rootToken string
+	listenAddr string
+	storageAddr       string
+
+	serverAPIEndpoint string
+
+	storageName string
+	storageUser string
+	storagePass string
+	timerValue  int
 
 	rootCmd *cobra.Command
 }
@@ -29,34 +47,114 @@ func NewApplication() *Application {
 func (app *Application) InitCommands() {
 
 	app.rootCmd = &cobra.Command{
-		Use: "stream",
+		Use:   "stream",
 		Short: "Stream API",
-		Long: "Stream control API",
+		Long:  "Stream control API",
 		Run: func(cmd *cobra.Command, args []string) {
 			app.Init()
+			app.Server.Run()
 		},
 	}
 
-	app.rootCmd.PersistentFlags().IntVarP(&app.interruptTimer, "timer", "t", 1000, "")
-	app.rootCmd.PersistentFlags().StringVarP(&app.rootToken, "rootToken", "rt", "aVfg!&afP" ,"")
+	app.rootCmd.PersistentFlags().StringVarP(&app.configFile, "config_file", "c", "", "default ./libstream.yaml")
+	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8000", "service address")
+	app.rootCmd.PersistentFlags().StringVarP(&app.storageAddr, "storage_address", "a", "localhost:8000", "DB address")
+	app.rootCmd.PersistentFlags().StringVarP(&app.serverAPIEndpoint, "api", "p", "/", "API URL endpoint")
+	app.rootCmd.PersistentFlags().StringVarP(&app.storageName, "storage_name", "n", "", "DB name")
+	app.rootCmd.PersistentFlags().StringVarP(&app.storageUser, "storage_user", "u", "", "DB user")
+	app.rootCmd.PersistentFlags().StringVarP(&app.storagePass, "storage_password", "d", "", "DB password")
+	app.rootCmd.PersistentFlags().IntVarP(&app.timerValue, "timer_value", "t", 100, "time to wait")
 }
 
+func (app *Application) InitConfig(configName, envPrefix string) {
+	cfg := viper.New()
+
+	cfg.SetEnvPrefix(envPrefix)
+	cfg.AutomaticEnv()
+	cfg.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	cfg.SetDefault("server.addr", "localhost:8000")
+	cfg.BindPFlag("server.addr", app.rootCmd.PersistentFlags().Lookup("service_address"))
+
+	cfg.SetDefault("server.apiPrefix", "")
+	cfg.BindPFlag("server.apiPrefix", app.rootCmd.PersistentFlags().Lookup("api"))
+
+	cfg.SetDefault("storage.address", "")
+	cfg.BindPFlag("storage.address", app.rootCmd.PersistentFlags().Lookup("storage_address"))
+
+	cfg.SetDefault("storage.name", "stream")
+	cfg.BindPFlag("storage.name", app.rootCmd.PersistentFlags().Lookup("storage_name"))
+
+	cfg.SetDefault("storage.user", "testu")
+	cfg.BindPFlag("storage.user", app.rootCmd.PersistentFlags().Lookup("storage_user"))
+
+	cfg.SetDefault("storage.password", "testup")
+	cfg.BindPFlag("storage.password", app.rootCmd.PersistentFlags().Lookup("storage_password"))
+
+	cfg.SetDefault("root.token", "!csdf!25")
+
+	cfg.BindPFlag("config", app.rootCmd.PersistentFlags().Lookup("config_file"))
+	if cfg.GetString("config") != "" {
+		cfg.SetConfigName(cfg.GetString("config"))
+	} else {
+		cfg.SetConfigName(configName)
+	}
+
+	cfg.AddConfigPath("/etc/")
+	cfg.AddConfigPath("$HOME/")
+	cfg.AddConfigPath(".")
+
+	app.cfg = cfg
+}
+
+func (app *Application) GetConfig() *viper.Viper {
+	return app.cfg
+}
+
+func (app *Application) Configure(params ...string) {
+	configName := AppName
+	envName := AppName
+	switch {
+	case len(params) == 1:
+		configName = params[0]
+		envName = params[0]
+	case len(params) > 1:
+		configName = params[0]
+		envName = params[1]
+	}
+	app.InitCommands()
+	app.InitConfig(configName, envName)
+}
 
 func (app *Application) Init() {
-	app.interruptTimer = app.cfg.GetInt("timer")
-	app.rootToken = app.cfg.GetString("rootToken")
+	if app.configFile != "" {
+		app.cfg.SetConfigName(app.configFile)
+	}
+	err := app.cfg.ReadInConfig()
+	if err != nil {
+		Logger.Debug("Configuration file not found")
+	} else {
+		Logger.Infow("Configuration file", "path", app.cfg.ConfigFileUsed())
+	}
 
-	router := mux.NewRouter()
-	sub := router.PathPrefix("/api/v1").Subrouter()
-	sub.HandleFunc("/s", ShowAllStreams).Methods("GET")
-	sub.HandleFunc("/run", StartNewStream).Methods("GET")
-	sub.HandleFunc("/activate/{id}", ActivateStream).Methods("PATCH")
-	sub.HandleFunc("/interrupt/{id}", InterruptStream).Methods("PATCH")
-	sub.HandleFunc("/finish/{id}", FinishStream).Methods("PATCH")
-	http.ListenAndServe(":8000", router)
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+		app.cfg.GetString("storage.user"),
+		app.cfg.GetString("storage.password"),
+		app.cfg.GetString("storage.name"))
+	DB, err = sql.Open("postgres", dbinfo)
+	if err != nil {
+		panic(err)
+	}
 
+	app.listenAddr = app.cfg.GetString("server.addr")
+	app.Server = NewServer(ServerConfig{
+		address:   app.cfg.GetString("server.addr"),
+		rootToken: app.cfg.GetString("root.token"),
+		apiPrefix: app.cfg.GetString("api"),
+	})
+
+	app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
 }
-
 
 func (app *Application) Run() {
 	if err := app.rootCmd.Execute(); err != nil {

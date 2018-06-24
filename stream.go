@@ -4,6 +4,6 @@ import "github.com/SArtemJ/GoStreamControlAPI/libstream"
 
 func main() {
 	app := libstream.NewApplication()
-	app.Init()
+	app.Configure()
 	app.Run()
 }

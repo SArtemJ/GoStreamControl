@@ -2,29 +2,21 @@ package libstream
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 )
 
-var (
-	DB *sql.DB
-)
 
-const (
-	DBUser     = "testu"
-	DBpassword = "testup"
-	DBName     = "stream"
-)
 
-func init() {
-	var err error
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBpassword, DBName)
-	DB, err = sql.Open("postgres", dbinfo)
-	if err != nil {
-		panic(err)
-	}
-	//defer DB.Close()
-}
+
+//func init() {
+//	var err error
+//	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBpassword, DBName)
+//	DB, err = sql.Open("postgres", dbinfo)
+//	if err != nil {
+//		panic(err)
+//	}
+//	defer DB.Close()
+//}
 
 func SelectAll(pn int, ps int) ([]Stream, bool) {
 	var allStreams []Stream

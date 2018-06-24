@@ -55,7 +55,6 @@ COPY public.stream (id, status) FROM stdin;
 14d5a503-41cb-4b89-bf50-5431f7be093e	Created
 \.
 
-
 --
 -- PostgreSQL database dump complete
 --
