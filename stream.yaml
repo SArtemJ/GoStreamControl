@@ -1,0 +1,7 @@
+server.addr: "localhost:8000"
+server.apiPrefix: "/api/v1/"
+storage.address: "addrDB"
+storage.name: "stream"
+storage.user: "testu"
+storage.password: "testup"
+root.token: "!csdf!25"

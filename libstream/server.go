@@ -11,10 +11,11 @@ import (
 
 type StreamServer struct {
 	Address   string
-	Timer     *time.Timer
-	RootToken string
-	Router    *mux.Router
 	APIPrefix string
+	RootToken string
+
+	Timer  *time.Timer
+	Router *mux.Router
 }
 
 type ServerConfig struct {
@@ -35,7 +36,7 @@ func NewServer(config ServerConfig) *StreamServer {
 	}
 
 	server := &StreamServer{
-		Address: config.address,
+		Address:   config.address,
 		RootToken: config.rootToken,
 		APIPrefix: config.apiPrefix,
 	}
@@ -46,17 +47,17 @@ func NewServer(config ServerConfig) *StreamServer {
 
 func (s *StreamServer) SetupRouter() {
 	s.Router = mux.NewRouter()
-	s.Router.PathPrefix(s.APIPrefix + "stream").Subrouter()
+	//s.Router.PathPrefix(s.APIPrefix)
 	Logger.Debugf(`API endpoint "%s"`, s.APIPrefix)
 }
 
 func (s *StreamServer) Run() {
 	Logger.Infof(`Stream server started on "%s"`, s.Address)
-	s.Router.HandleFunc("/s", s.ShowAllStreams).Methods("GET")
-	s.Router.HandleFunc("/run", s.StartNewStream).Methods("GET")
-	s.Router.HandleFunc("/activate/{id}", s.ActivateStream).Methods("PATCH")
-	s.Router.HandleFunc("/interrupt/{id}", s.InterruptStream).Methods("PATCH")
-	s.Router.HandleFunc("/finish/{id}", s.FinishStream).Methods("PATCH")
+	s.Router.PathPrefix("/s").HandlerFunc(s.ShowAllStreams).Methods("GET")
+	s.Router.PathPrefix("/run").HandlerFunc(s.StartNewStream).Methods("GET")
+	s.Router.PathPrefix("/activate/{id}").HandlerFunc(s.ActivateStream).Methods("PATCH")
+	s.Router.PathPrefix("/interrupt/{id}").HandlerFunc(s.InterruptStream).Methods("PATCH")
+	s.Router.PathPrefix("/finish/{id}").HandlerFunc(s.FinishStream).Methods("PATCH")
 	http.ListenAndServe(s.Address, s.Router)
 }
 
@@ -79,6 +80,7 @@ func (s *StreamServer) ShowAllStreams(w http.ResponseWriter, r *http.Request) {
 //start new -- created
 func (s *StreamServer) StartNewStream(w http.ResponseWriter, r *http.Request) {
 	stream := NewStream()
+	Logger.Debug(`New stream created with uuid `, stream.ID)
 	if InsertToDB(stream) {
 		streamJSON, _ := json.Marshal(s)
 		w.WriteHeader(http.StatusCreated)
@@ -123,6 +125,6 @@ func (s *StreamServer) UpdateStream(w http.ResponseWriter, streamID string, stat
 }
 
 func (s *StreamServer) finishByTimer(w http.ResponseWriter, streamID string) {
-	<- s.Timer.C
+	<-s.Timer.C
 	s.UpdateStream(w, streamID, "f")
 }

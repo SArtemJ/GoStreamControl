@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"time"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -26,8 +27,8 @@ type Application struct {
 
 	configFile string
 
-	listenAddr string
-	storageAddr       string
+	listenAddr  string
+	storageAddr string
 
 	serverAPIEndpoint string
 
@@ -56,10 +57,10 @@ func (app *Application) InitCommands() {
 		},
 	}
 
-	app.rootCmd.PersistentFlags().StringVarP(&app.configFile, "config_file", "c", "", "default ./libstream.yaml")
+	app.rootCmd.PersistentFlags().StringVarP(&app.configFile, "config", "c", "", "default ./libstream.yaml")
 	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8000", "service address")
 	app.rootCmd.PersistentFlags().StringVarP(&app.storageAddr, "storage_address", "a", "localhost:8000", "DB address")
-	app.rootCmd.PersistentFlags().StringVarP(&app.serverAPIEndpoint, "api", "p", "/", "API URL endpoint")
+	app.rootCmd.PersistentFlags().StringVarP(&app.serverAPIEndpoint, "api", "p", "", "API URL endpoint")
 	app.rootCmd.PersistentFlags().StringVarP(&app.storageName, "storage_name", "n", "", "DB name")
 	app.rootCmd.PersistentFlags().StringVarP(&app.storageUser, "storage_user", "u", "", "DB user")
 	app.rootCmd.PersistentFlags().StringVarP(&app.storagePass, "storage_password", "d", "", "DB password")
@@ -93,7 +94,7 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 
 	cfg.SetDefault("root.token", "!csdf!25")
 
-	cfg.BindPFlag("config", app.rootCmd.PersistentFlags().Lookup("config_file"))
+	cfg.BindPFlag("config", app.rootCmd.PersistentFlags().Lookup("config"))
 	if cfg.GetString("config") != "" {
 		cfg.SetConfigName(cfg.GetString("config"))
 	} else {
@@ -102,13 +103,24 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 
 	cfg.AddConfigPath("/etc/")
 	cfg.AddConfigPath("$HOME/")
-	cfg.AddConfigPath(".")
+	cfg.AddConfigPath("./")
 
 	app.cfg = cfg
 }
 
 func (app *Application) GetConfig() *viper.Viper {
 	return app.cfg
+}
+
+func (app *Application) ConfigureLog() {
+
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	logger, err := config.Build()
+	if err != nil {
+		panic("Failed to initialize logger")
+	}
+	Logger = logger.Sugar()
 }
 
 func (app *Application) Configure(params ...string) {
@@ -124,6 +136,7 @@ func (app *Application) Configure(params ...string) {
 	}
 	app.InitCommands()
 	app.InitConfig(configName, envName)
+	app.ConfigureLog()
 }
 
 func (app *Application) Init() {
@@ -150,7 +163,40 @@ func (app *Application) Init() {
 	app.Server = NewServer(ServerConfig{
 		address:   app.cfg.GetString("server.addr"),
 		rootToken: app.cfg.GetString("root.token"),
-		apiPrefix: app.cfg.GetString("api"),
+		apiPrefix: app.cfg.GetString("server.apiPrefix"),
+	})
+
+	app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
+}
+
+func (app *Application) InitWithConfig(cfg map[string]interface{}) {
+	if app.configFile != "" {
+		app.cfg.SetConfigName(app.configFile)
+	}
+	err := app.cfg.ReadInConfig()
+	if err != nil {
+		Logger.Debug("Configuration file not found")
+	} else {
+		Logger.Infow("Configuration file", "path", app.cfg.ConfigFileUsed())
+	}
+	for key, value := range cfg {
+		app.cfg.Set(key, value)
+	}
+
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+		app.cfg.GetString("storage.user"),
+		app.cfg.GetString("storage.password"),
+		app.cfg.GetString("storage.name"))
+	DB, err = sql.Open("postgres", dbinfo)
+	if err != nil {
+		panic(err)
+	}
+
+	app.listenAddr = app.cfg.GetString("server.addr")
+	app.Server = NewServer(ServerConfig{
+		address:   app.cfg.GetString("server.addr"),
+		rootToken: app.cfg.GetString("root.token"),
+		apiPrefix: app.cfg.GetString("server.apiPrefix"),
 	})
 
 	app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
