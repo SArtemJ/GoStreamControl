@@ -47,17 +47,31 @@ func NewServer(config ServerConfig) *StreamServer {
 
 func (s *StreamServer) SetupRouter() {
 	s.Router = mux.NewRouter()
-	//s.Router.PathPrefix(s.APIPrefix)
+	s.Router = s.Router.PathPrefix(s.APIPrefix).Subrouter()
 	Logger.Debugf(`API endpoint "%s"`, s.APIPrefix)
+}
+
+func (s *StreamServer) GetRouter() *mux.Router {
+	return s.Router
 }
 
 func (s *StreamServer) Run() {
 	Logger.Infof(`Stream server started on "%s"`, s.Address)
-	s.Router.PathPrefix("/s").HandlerFunc(s.ShowAllStreams).Methods("GET")
-	s.Router.PathPrefix("/run").HandlerFunc(s.StartNewStream).Methods("GET")
-	s.Router.PathPrefix("/activate/{id}").HandlerFunc(s.ActivateStream).Methods("PATCH")
-	s.Router.PathPrefix("/interrupt/{id}").HandlerFunc(s.InterruptStream).Methods("PATCH")
-	s.Router.PathPrefix("/finish/{id}").HandlerFunc(s.FinishStream).Methods("PATCH")
+	s.Router.HandleFunc("/s", s.ShowAllStreams).Methods("GET")
+	s.Router.HandleFunc("/run", s.StartNewStream).Methods("GET")
+	s.Router.HandleFunc("/activate/{id}", s.ActivateStream).Methods("PATCH")
+	s.Router.HandleFunc("/interrupt/{id}", s.InterruptStream).Methods("PATCH")
+	s.Router.HandleFunc("/finish/{id}", s.FinishStream).Methods("PATCH")
+
+	s.Router.HandleFunc("/status", s.Status).Methods("GET")
+	//s.Router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+	//	t, err := route.GetPathTemplate()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	fmt.Println(t)
+	//	return nil
+	//})
 	http.ListenAndServe(s.Address, s.Router)
 }
 
@@ -82,7 +96,7 @@ func (s *StreamServer) StartNewStream(w http.ResponseWriter, r *http.Request) {
 	stream := NewStream()
 	Logger.Debug(`New stream created with uuid `, stream.ID)
 	if InsertToDB(stream) {
-		streamJSON, _ := json.Marshal(s)
+		streamJSON, _ := json.Marshal(stream)
 		w.WriteHeader(http.StatusCreated)
 		w.Write(streamJSON)
 	}
@@ -127,4 +141,8 @@ func (s *StreamServer) UpdateStream(w http.ResponseWriter, streamID string, stat
 func (s *StreamServer) finishByTimer(w http.ResponseWriter, streamID string) {
 	<-s.Timer.C
 	s.UpdateStream(w, streamID, "f")
+}
+
+func (s *StreamServer) Status(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusFound)
 }

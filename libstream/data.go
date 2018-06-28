@@ -5,19 +5,6 @@ import (
 	"log"
 )
 
-
-
-
-//func init() {
-//	var err error
-//	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBpassword, DBName)
-//	DB, err = sql.Open("postgres", dbinfo)
-//	if err != nil {
-//		panic(err)
-//	}
-//	defer DB.Close()
-//}
-
 func SelectAll(pn int, ps int) ([]Stream, bool) {
 	var allStreams []Stream
 

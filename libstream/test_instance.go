@@ -15,3 +15,10 @@ func GetTestApp(cfg map[string]interface{}) *Application {
 func GetTestServer() *StreamServer {
 	return GetTestApp(nil).Server
 }
+
+func GetTestingServerWithConfig(cfg map[string]interface{}) *StreamServer {
+	app := NewApplication()
+	app.Configure("stream_test", "stream_test")
+	app.InitWithConfig(cfg)
+	return app.Server
+}
