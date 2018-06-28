@@ -39,14 +39,13 @@ func NewServer(config ServerConfig) *StreamServer {
 		Address:   config.address,
 		RootToken: config.rootToken,
 		APIPrefix: config.apiPrefix,
+		Router: mux.NewRouter(),
 	}
-
 	server.SetupRouter()
 	return server
 }
 
 func (s *StreamServer) SetupRouter() {
-	s.Router = mux.NewRouter()
 	s.Router = s.Router.PathPrefix(s.APIPrefix).Subrouter()
 	Logger.Debugf(`API endpoint "%s"`, s.APIPrefix)
 }
