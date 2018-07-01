@@ -5,6 +5,8 @@ import (
 	"log"
 )
 
+var sd = &StreamData{}
+
 func SelectAll(pn int, ps int) ([]Stream, bool) {
 	var allStreams []Stream
 
@@ -58,28 +60,32 @@ func validationPageSize(number int, size int, sliceData []Stream) ([]Stream, boo
 	return nil, false
 }
 
-func CheckFromDB(streamID string) (Stream, bool) {
-
-	var stream Stream
+func CheckFromDB(streamID string) (*StreamData, bool) {
+	sd.mux.Lock()
+	defer sd.mux.Unlock()
 	stringQ := "SELECT * FROM stream WHERE id = $1"
 
 	log.Println(stringQ)
 
 	row := DB.QueryRow(stringQ, streamID)
-	switch err := row.Scan(&stream.ID, &stream.Status); err {
+	switch err := row.Scan(&sd.stream.ID, &sd.stream.Status); err {
 	case sql.ErrNoRows:
-		return stream, false
+		return sd, false
 	case nil:
-		return stream, true
+		return sd, true
 	default:
 		log.Println(err.Error())
-		return stream, false
+		return sd, false
 	}
+
 }
 
-func UpdateRow(s Stream) bool {
+func UpdateRow(sd *StreamData) bool {
+	sd.mux.Lock()
+	defer  sd.mux.Unlock()
+
 	stringQ := "UPDATE stream SET status = $2 WHERE id = $1"
-	_, err := DB.Exec(stringQ, s.ID, s.Status)
+	_, err := DB.Exec(stringQ, sd.stream.ID, sd.stream.Status)
 	if err != nil {
 		log.Println(err.Error())
 		return false

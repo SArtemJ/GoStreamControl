@@ -150,13 +150,12 @@ func (app *Application) Init() {
 		Logger.Infow("Configuration file", "path", app.cfg.ConfigFileUsed())
 	}
 
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-		app.cfg.GetString("storage.user"),
-		app.cfg.GetString("storage.password"),
-		app.cfg.GetString("storage.name"))
-	DB, err = sql.Open("postgres", dbinfo)
-	if err != nil {
-		panic(err)
+	u := app.cfg.GetString("storage.user")
+	p := app.cfg.GetString("storage.password")
+	n := app.cfg.GetString("storage.name")
+
+	if db, ok := app.ConnectToDB(u, p, n); ok {
+		DB = db
 	}
 
 	app.listenAddr = app.cfg.GetString("server.addr")
@@ -183,14 +182,22 @@ func (app *Application) InitWithConfig(cfg map[string]interface{}) {
 		app.cfg.Set(key, value)
 	}
 
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-		app.cfg.GetString("storage.user"),
-		app.cfg.GetString("storage.password"),
-		app.cfg.GetString("storage.name"))
-	DB, err = sql.Open("postgres", dbinfo)
-	if err != nil {
-		panic(err)
+	u := app.cfg.GetString("storage.user")
+	p := app.cfg.GetString("storage.password")
+	n := app.cfg.GetString("storage.name")
+
+	if db, ok := app.ConnectToDB(u, p, n); ok {
+		DB = db
 	}
+
+	//dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+	//	app.cfg.GetString("storage.user"),
+	//	app.cfg.GetString("storage.password"),
+	//	app.cfg.GetString("storage.name"))
+	//DB, err = sql.Open("postgres", dbinfo)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	app.listenAddr = app.cfg.GetString("server.addr")
 	app.Server = NewServer(ServerConfig{
@@ -200,6 +207,19 @@ func (app *Application) InitWithConfig(cfg map[string]interface{}) {
 	})
 
 	app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
+}
+
+func (app *Application) ConnectToDB(user, password, nameDB string) (*sql.DB, bool) {
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+		user,
+		password,
+		nameDB)
+
+	d, err := sql.Open("postgres", dbinfo)
+	if err != nil {
+		return nil, false
+	}
+	return d, true
 }
 
 func (app *Application) Run() {

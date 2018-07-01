@@ -48,6 +48,14 @@ func NewServer(config ServerConfig) *StreamServer {
 func (s *StreamServer) SetupRouter() {
 	s.Router = s.Router.PathPrefix(s.APIPrefix).Subrouter()
 	Logger.Debugf(`API endpoint "%s"`, s.APIPrefix)
+
+	s.Router.HandleFunc("/s", s.ShowAllStreams).Methods("GET")
+	s.Router.HandleFunc("/run", s.StartNewStream).Methods("GET")
+	s.Router.HandleFunc("/activate/{id}", s.ActivateStream).Methods("PATCH")
+	s.Router.HandleFunc("/interrupt/{id}", s.InterruptStream).Methods("PATCH")
+	s.Router.HandleFunc("/finish/{id}", s.FinishStream).Methods("PATCH")
+
+	s.Router.HandleFunc("/status", s.Status).Methods("GET")
 }
 
 func (s *StreamServer) GetRouter() *mux.Router {
@@ -56,13 +64,7 @@ func (s *StreamServer) GetRouter() *mux.Router {
 
 func (s *StreamServer) Run() {
 	Logger.Infof(`Stream server started on "%s"`, s.Address)
-	s.Router.HandleFunc("/s", s.ShowAllStreams).Methods("GET")
-	s.Router.HandleFunc("/run", s.StartNewStream).Methods("GET")
-	s.Router.HandleFunc("/activate/{id}", s.ActivateStream).Methods("PATCH")
-	s.Router.HandleFunc("/interrupt/{id}", s.InterruptStream).Methods("PATCH")
-	s.Router.HandleFunc("/finish/{id}", s.FinishStream).Methods("PATCH")
 
-	s.Router.HandleFunc("/status", s.Status).Methods("GET")
 	//s.Router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 	//	t, err := route.GetPathTemplate()
 	//	if err != nil {
