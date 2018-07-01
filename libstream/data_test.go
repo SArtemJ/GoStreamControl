@@ -4,11 +4,30 @@ import (
 	"testing"
 	"net/http"
 	"net/http/httptest"
+	"fmt"
+	"database/sql"
 )
+
+var globalUUID_Stream []string
+
+func InitializeDataInDB() {
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+		"testu",
+		"testup",
+		"stream", )
+	DB, _ = sql.Open("postgres", dbinfo)
+
+	for i := 0; i < 500; i++ {
+		stream := NewStream()
+		InsertToDB(stream)
+		//globalUUID_Stream = append(globalUUID_Stream, stream.ID)
+	}
+}
 
 func TestStartStream(t *testing.T) {
 
 	server := GetTestServer()
+
 	req, _ := http.NewRequest("GET", "/test/run", nil)
 	w := httptest.NewRecorder()
 	//handler := http.HandlerFunc(server.StartNewStream)
@@ -26,31 +45,16 @@ func TestStartStream(t *testing.T) {
 func TestInterruptStream(t *testing.T) {
 
 	server := GetTestServer()
+	InitializeDataInDB()
 
+	for i := 20; i < 25; i++ {
 
-	req, _ := http.NewRequest("GET", "/test/interrupt/", nil)
-	w := httptest.NewRecorder()
-	//handler := http.HandlerFunc(server.StartNewStream)
+		requestURL := fmt.Sprintf("/test/interrupt/%s", globalUUID_Stream[i])
+		req, _ := http.NewRequest("GET", requestURL, nil)
+		w := httptest.NewRecorder()
 
-	server.GetRouter().ServeHTTP(w, req)
-	//testData := CreateToInsert(9978)
-	//requestBody := bytes.NewBuffer(nil)
-	//jsonapi.MarshalOnePayloadEmbedded(requestBody, testData)
-	//
-	//req, err := http.NewRequest("POST", "/api/v1/values", requestBody)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//req.Header.Set("Content-Type", jsonapi.MediaType)
-	//
-	//rr := httptest.NewRecorder()
-	//handler := http.HandlerFunc(PostData)
-	//handler.ServeHTTP(rr, req)
-	//
-	//if rr.Code != http.StatusOK {
-	//	t.Errorf("handler returned wrong status code: got %v want %v",
-	//		rr.Code, http.StatusOK)
-	//}
+		server.GetRouter().ServeHTTP(w, req)
+	}
 
 }
 
@@ -77,17 +81,4 @@ func TestConcurrent(t *testing.T) {
 	//	runtime.Gosched()
 	//}
 	//wg.Wait()
-}
-
-//func CreateToInsert(id int) *NestedData {
-	//var k NestedData
-	//k.ID = id
-	//k.Name = "test" + strconv.Itoa(id)
-	//k.Value = "test" + strconv.Itoa(id)
-	//return &k
-//}
-
-
-func GetDataFromDB(server * StreamServer) {
-	SelectAll()
 }
