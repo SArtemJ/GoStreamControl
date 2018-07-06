@@ -1,14 +1,15 @@
 package libstream
 
 import (
-	"github.com/spf13/viper"
-	"github.com/spf13/cobra"
-	"strings"
-	"go.uber.org/zap"
-	"fmt"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
+
 	_ "github.com/lib/pq"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -58,8 +59,8 @@ func (app *Application) InitCommands() {
 	}
 
 	app.rootCmd.PersistentFlags().StringVarP(&app.configFile, "config", "c", "", "default ./libstream.yaml")
-	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8000", "service address")
-	app.rootCmd.PersistentFlags().StringVarP(&app.storageAddr, "storage_address", "a", "localhost:8000", "DB address")
+	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8099", "service address")
+	app.rootCmd.PersistentFlags().StringVarP(&app.storageAddr, "storage_address", "a", "localhost:8099", "DB address")
 	app.rootCmd.PersistentFlags().StringVarP(&app.serverAPIEndpoint, "api", "p", "", "API URL endpoint")
 	app.rootCmd.PersistentFlags().StringVarP(&app.storageName, "storage_name", "n", "", "DB name")
 	app.rootCmd.PersistentFlags().StringVarP(&app.storageUser, "storage_user", "u", "", "DB user")
@@ -74,7 +75,7 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 	cfg.AutomaticEnv()
 	cfg.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	cfg.SetDefault("server.addr", "localhost:8000")
+	cfg.SetDefault("server.addr", "localhost:8099")
 	cfg.BindPFlag("server.addr", app.rootCmd.PersistentFlags().Lookup("service_address"))
 
 	cfg.SetDefault("server.apiPrefix", "")
@@ -210,7 +211,7 @@ func (app *Application) InitWithConfig(cfg map[string]interface{}) {
 }
 
 func (app *Application) ConnectToDB(user, password, nameDB string) (*sql.DB, bool) {
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s port=5432 sslmode=disable",
 		user,
 		password,
 		nameDB)
