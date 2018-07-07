@@ -1,7 +1,7 @@
 version: "3"
 services:
   db:
-    image: postgres:latest
+    image: postgres:9.6-alpine
     restart: always
     environment:
       POSTGRES_PASSWORD: testu
@@ -17,6 +17,6 @@ services:
     volumes:
     - ./:/var/lib/go/src/github.com/SArtemJ/GoStreamControlAPI
     ports:
-    - 8000:8000
+    - 8099:8099
     depends_on:
     - db

@@ -1,0 +1,10 @@
+postgres:
+  image: postgres:9.6-alpine
+  ports:
+    - '5432:5432'
+  environment:
+    POSTGRES_USER: testu
+    POSTGRES_PASSWORD: testup
+    POSTGRES_DB: stream
+  volumes:
+    - ./:/docker-entrypoint-initdb.d/
