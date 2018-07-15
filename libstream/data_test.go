@@ -1,11 +1,11 @@
 package libstream
 
 import (
-	"testing"
+	"database/sql"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"fmt"
-	"database/sql"
+	"testing"
 )
 
 var globalUUID_Stream []string
@@ -14,12 +14,12 @@ func InitializeDataInDB() {
 	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
 		"testu",
 		"testup",
-		"stream", )
+		"stream")
 	DB, _ = sql.Open("postgres", dbinfo)
 
 	for i := 0; i < 500; i++ {
 		stream := NewStream()
-		InsertToDB(stream)
+		InsertToDB(&stream.S)
 		//globalUUID_Stream = append(globalUUID_Stream, stream.ID)
 	}
 }

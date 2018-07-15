@@ -1,8 +1,9 @@
 package libstream
 
 import (
-	"github.com/satori/go.uuid"
 	"sync"
+
+	"github.com/satori/go.uuid"
 )
 
 // Created
@@ -16,32 +17,35 @@ type Stream struct {
 }
 
 type StreamData struct {
-	stream Stream
-	mux sync.Mutex
+	M sync.RWMutex
+	S Stream
 }
 
-func NewStream() *Stream {
-	idT, _ := uuid.NewV4()
-	idTString := idT.String()
+func NewStream() StreamData {
+	ID, _ := uuid.NewV4()
+	IDString := ID.String()
 
-	stream := &Stream{
-		ID:     idTString,
+	stream := Stream{
+		ID:     IDString,
 		Status: "Created",
 	}
-	return stream
+
+	streamData := StreamData{}
+	streamData.S = stream
+	return streamData
 }
 
 func (sd *StreamData) UpdateStatus(status string) (string, bool) {
-	if sd.stream.Status != "Finished" {
+	if sd.S.Status != "Finished" {
 		switch status {
 		case "a":
-			sd.stream.Status = "Active"
+			sd.S.Status = "Active"
 			return "Active", true
 		case "i":
-			sd.stream.Status = "Interrupted"
+			sd.S.Status = "Interrupted"
 			return "Interrupted", true
 		case "f":
-			sd.stream.Status = "Finished"
+			sd.S.Status = "Finished"
 			return "Finished", true
 		default:
 			return "", false

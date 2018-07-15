@@ -191,15 +191,6 @@ func (app *Application) InitWithConfig(cfg map[string]interface{}) {
 		DB = db
 	}
 
-	//dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-	//	app.cfg.GetString("storage.user"),
-	//	app.cfg.GetString("storage.password"),
-	//	app.cfg.GetString("storage.name"))
-	//DB, err = sql.Open("postgres", dbinfo)
-	//if err != nil {
-	//	panic(err)
-	//}
-
 	app.listenAddr = app.cfg.GetString("server.addr")
 	app.Server = NewServer(ServerConfig{
 		address:   app.cfg.GetString("server.addr"),

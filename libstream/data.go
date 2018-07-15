@@ -31,9 +31,11 @@ func SelectAll(pn int, ps int) ([]Stream, bool) {
 	return nil, false
 }
 
-func InsertToDB(s *Stream) bool {
+func InsertToDB(sd *StreamData) bool {
+	sd.M.Lock()
+	defer sd.M.Unlock()
 	stringQ := "INSERT INTO stream (id, status) VALUES ($1, $2)"
-	_, err := DB.Exec(stringQ, s.ID, s.Status)
+	_, err := DB.Exec(stringQ, sd.S.ID, sd.S.Status)
 	if err != nil {
 		log.Println(err.Error())
 		return false
@@ -41,9 +43,11 @@ func InsertToDB(s *Stream) bool {
 	return true
 }
 
-func DeleteFromDB(s *Stream) bool {
+func DeleteFromDB(sd *StreamData) bool {
+	sd.M.Lock()
+	defer sd.M.Unlock()
 	stringQ := "DELETE FROM stream WHERE id = $1"
-	_, err := DB.Exec(stringQ, s.ID)
+	_, err := DB.Exec(stringQ, sd.S.ID)
 	if err != nil {
 		log.Println(err.Error())
 		return false
@@ -61,31 +65,28 @@ func validationPageSize(number int, size int, sliceData []Stream) ([]Stream, boo
 }
 
 func CheckFromDB(streamID string) (*StreamData, bool) {
-	sd.mux.Lock()
-	defer sd.mux.Unlock()
+
+	sd := StreamData{}
 	stringQ := "SELECT * FROM stream WHERE id = $1"
-
-	log.Println(stringQ)
-
 	row := DB.QueryRow(stringQ, streamID)
-	switch err := row.Scan(&sd.stream.ID, &sd.stream.Status); err {
+	switch err := row.Scan(&sd.S.ID, &sd.S.Status); err {
 	case sql.ErrNoRows:
-		return sd, false
+		return &sd, false
 	case nil:
-		return sd, true
+		return &sd, true
 	default:
 		log.Println(err.Error())
-		return sd, false
+		return &sd, false
 	}
 
 }
 
 func UpdateRow(sd *StreamData) bool {
-	sd.mux.Lock()
-	defer  sd.mux.Unlock()
+	sd.M.Lock()
+	defer sd.M.Unlock()
 
 	stringQ := "UPDATE stream SET status = $2 WHERE id = $1"
-	_, err := DB.Exec(stringQ, sd.stream.ID, sd.stream.Status)
+	_, err := DB.Exec(stringQ, sd.S.ID, sd.S.Status)
 	if err != nil {
 		log.Println(err.Error())
 		return false

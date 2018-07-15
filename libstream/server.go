@@ -1,12 +1,13 @@
 package libstream
 
 import (
-	"net/http"
-	"strconv"
 	"encoding/json"
 	"io"
-	"github.com/gorilla/mux"
+	"net/http"
+	"strconv"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type StreamServer struct {
@@ -39,7 +40,7 @@ func NewServer(config ServerConfig) *StreamServer {
 		Address:   config.address,
 		RootToken: config.rootToken,
 		APIPrefix: config.apiPrefix,
-		Router: mux.NewRouter(),
+		Router:    mux.NewRouter(),
 	}
 	server.SetupRouter()
 	return server
@@ -95,8 +96,8 @@ func (s *StreamServer) ShowAllStreams(w http.ResponseWriter, r *http.Request) {
 //start new -- created
 func (s *StreamServer) StartNewStream(w http.ResponseWriter, r *http.Request) {
 	stream := NewStream()
-	Logger.Debug(`New stream created with uuid `, stream.ID)
-	if InsertToDB(stream) {
+	Logger.Debug(`New stream created with uuid `, stream.S.ID)
+	if InsertToDB(&stream) {
 		streamJSON, _ := json.Marshal(stream)
 		w.WriteHeader(http.StatusCreated)
 		w.Write(streamJSON)
