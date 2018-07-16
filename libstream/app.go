@@ -209,6 +209,7 @@ func (app *Application) ConnectToDB(user, password, nameDB string) (*sql.DB, boo
 
 	d, err := sql.Open("postgres", dbinfo)
 	if err != nil {
+		Logger.Debugw("Connection DB refused please check params")
 		return nil, false
 	}
 	return d, true

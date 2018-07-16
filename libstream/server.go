@@ -98,7 +98,7 @@ func (s *StreamServer) StartNewStream(w http.ResponseWriter, r *http.Request) {
 	stream := NewStream()
 	Logger.Debug(`New stream created with uuid `, stream.S.ID)
 	if InsertToDB(&stream) {
-		streamJSON, _ := json.Marshal(stream)
+		streamJSON, _ := json.Marshal(stream.S)
 		w.WriteHeader(http.StatusCreated)
 		w.Write(streamJSON)
 	}

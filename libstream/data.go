@@ -2,7 +2,6 @@ package libstream
 
 import (
 	"database/sql"
-	"log"
 )
 
 var sd = &StreamData{}
@@ -12,7 +11,7 @@ func SelectAll(pn int, ps int) ([]Stream, bool) {
 
 	rows, err := DB.Query("SELECT * FROM stream")
 	if err != nil {
-		log.Println(err.Error())
+		Logger.Debugw("Operation select from DB.Query", "err ", err.Error())
 	}
 	defer rows.Close()
 
@@ -20,7 +19,7 @@ func SelectAll(pn int, ps int) ([]Stream, bool) {
 		var s Stream
 		err := rows.Scan(&s.ID, &s.Status)
 		if err != nil {
-			log.Println(err.Error())
+			Logger.Infow("Operation select from rows.Scan", "err ", err.Error())
 		}
 		allStreams = append(allStreams, s)
 	}
@@ -35,9 +34,9 @@ func InsertToDB(sd *StreamData) bool {
 	sd.M.Lock()
 	defer sd.M.Unlock()
 	stringQ := "INSERT INTO stream (id, status) VALUES ($1, $2)"
-	_, err := DB.Exec(stringQ, sd.S.ID, sd.S.Status)
+	_, err := DB.Exec(stringQ, &sd.S.ID, &sd.S.Status)
 	if err != nil {
-		log.Println(err.Error())
+		Logger.Debugw("Operation insert to DB", "err ", err.Error())
 		return false
 	}
 	return true
@@ -49,7 +48,7 @@ func DeleteFromDB(sd *StreamData) bool {
 	stringQ := "DELETE FROM stream WHERE id = $1"
 	_, err := DB.Exec(stringQ, sd.S.ID)
 	if err != nil {
-		log.Println(err.Error())
+		Logger.Debugw("Operation delete from DB", "err ", err.Error())
 		return false
 	}
 	return true
@@ -71,11 +70,12 @@ func CheckFromDB(streamID string) (*StreamData, bool) {
 	row := DB.QueryRow(stringQ, streamID)
 	switch err := row.Scan(&sd.S.ID, &sd.S.Status); err {
 	case sql.ErrNoRows:
+		Logger.Debugw("No stream in DB", "err ", err.Error())
 		return &sd, false
 	case nil:
 		return &sd, true
 	default:
-		log.Println(err.Error())
+		Logger.Debugw("No stream in DB", "err ", err.Error())
 		return &sd, false
 	}
 
@@ -88,7 +88,7 @@ func UpdateRow(sd *StreamData) bool {
 	stringQ := "UPDATE stream SET status = $2 WHERE id = $1"
 	_, err := DB.Exec(stringQ, sd.S.ID, sd.S.Status)
 	if err != nil {
-		log.Println(err.Error())
+		Logger.Debugw("Operation update stream in DB", "err ", err.Error())
 		return false
 	}
 	return true

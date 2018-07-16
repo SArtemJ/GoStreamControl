@@ -30,9 +30,9 @@ func NewStream() StreamData {
 		Status: "Created",
 	}
 
-	streamData := StreamData{}
-	streamData.S = stream
-	return streamData
+	sD := StreamData{}
+	sD.S = stream
+	return sD
 }
 
 func (sd *StreamData) UpdateStatus(status string) (string, bool) {
