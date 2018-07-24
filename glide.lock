@@ -1,5 +1,5 @@
-hash: 2133132925bf1bc1b72e819c4416b3b7f187677a1b9aad0686a4a2129bf408ca
-updated: 2018-07-07T00:18:18.870056+03:00
+hash: 6a79ec30e4aeaa029770cd37354aa7ffba50e7946f688e856969e98f95f2f5d8
+updated: 2018-07-23T22:33:41.656976+03:00
 imports:
 - name: github.com/fsnotify/fsnotify
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
@@ -31,8 +31,6 @@ imports:
   version: bb74f1db0675b241733089d5a1faa5dd8b0ef57b
 - name: github.com/pelletier/go-toml
   version: 603baefff989777996bf283da430d693e78eba3a
-- name: github.com/satori/go.uuid
-  version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/spf13/afero
   version: 787d034dfe70e44075ccc060d346146ef53270ad
   subpackages:
@@ -72,6 +70,13 @@ imports:
   - unicode/norm
 - name: gopkg.in/gomail.v2
   version: 81ebce5c23dfd25c6c67194b37d3dd3f338c98b1
+- name: gopkg.in/mgo.v2
+  version: 9856a29383ce1c59f308dd1cf0363a79b5bef6b5
+  subpackages:
+  - bson
+  - internal/json
+  - internal/sasl
+  - internal/scram
 - name: gopkg.in/yaml.v2
   version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports:

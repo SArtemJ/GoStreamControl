@@ -1,7 +1,8 @@
-server.addr: "localhost:8000"
+#local-machine localhost:8888
+#docker 0.0.0.0:8888
+server.addr: "0.0.0.0:8888"
 server.apiPrefix: "/api/v1/"
-storage.address: "addrDB"
+storage.address: "localhost"
 storage.name: "stream"
-storage.user: "testu"
-storage.password: "testup"
-root.token: "!csdf!25"
+timer.value: 1
+r.t: "!)asd!567z"

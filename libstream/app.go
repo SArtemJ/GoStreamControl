@@ -1,12 +1,8 @@
 package libstream
 
 import (
-	"database/sql"
-	"fmt"
 	"strings"
-	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -14,11 +10,10 @@ import (
 )
 
 const (
-	AppName = "stream"
+	AppName = "StreamApp"
 )
 
 var (
-	DB     *sql.DB
 	Logger = zap.S()
 )
 
@@ -26,18 +21,14 @@ type Application struct {
 	cfg    *viper.Viper
 	Server *StreamServer
 
-	configFile string
-
-	listenAddr  string
-	storageAddr string
-
+	configFile        string
+	listenAddr        string
 	serverAPIEndpoint string
+	storageAddr       string
+	storageName       string
+	timerValue        int
 
-	storageName string
-	storageUser string
-	storagePass string
-	timerValue  int
-
+	Rt      string
 	rootCmd *cobra.Command
 }
 
@@ -59,13 +50,12 @@ func (app *Application) InitCommands() {
 	}
 
 	app.rootCmd.PersistentFlags().StringVarP(&app.configFile, "config", "c", "", "default ./libstream.yaml")
-	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8099", "service address")
-	app.rootCmd.PersistentFlags().StringVarP(&app.storageAddr, "storage_address", "a", "localhost:8099", "DB address")
+	app.rootCmd.PersistentFlags().StringVarP(&app.listenAddr, "service_address", "l", "localhost:8888", "Service address")
+	app.rootCmd.PersistentFlags().StringVarP(&app.storageAddr, "storage_address", "a", "localhost", "Mongo address")
 	app.rootCmd.PersistentFlags().StringVarP(&app.serverAPIEndpoint, "api", "p", "", "API URL endpoint")
-	app.rootCmd.PersistentFlags().StringVarP(&app.storageName, "storage_name", "n", "", "DB name")
-	app.rootCmd.PersistentFlags().StringVarP(&app.storageUser, "storage_user", "u", "", "DB user")
-	app.rootCmd.PersistentFlags().StringVarP(&app.storagePass, "storage_password", "d", "", "DB password")
-	app.rootCmd.PersistentFlags().IntVarP(&app.timerValue, "timer_value", "t", 100, "time to wait")
+	app.rootCmd.PersistentFlags().StringVarP(&app.storageName, "storage_name", "n", "Stream", "Mongo DB name")
+	app.rootCmd.PersistentFlags().IntVarP(&app.timerValue, "timer_value", "t", 1, "Time to wait")
+	app.rootCmd.PersistentFlags().StringVarP(&app.Rt, "root_token", "r", "", "Root token for delete")
 }
 
 func (app *Application) InitConfig(configName, envPrefix string) {
@@ -75,25 +65,27 @@ func (app *Application) InitConfig(configName, envPrefix string) {
 	cfg.AutomaticEnv()
 	cfg.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	cfg.SetDefault("server.addr", "localhost:8099")
+	//on local-machine localhost:8888
+	//on docker 0.0.0.0:8888
+	cfg.SetDefault("server.addr", "0.0.0.0:8888")
 	cfg.BindPFlag("server.addr", app.rootCmd.PersistentFlags().Lookup("service_address"))
 
 	cfg.SetDefault("server.apiPrefix", "")
 	cfg.BindPFlag("server.apiPrefix", app.rootCmd.PersistentFlags().Lookup("api"))
 
-	cfg.SetDefault("storage.address", "")
+	//on local-machine localhost
+	//on docker gostreamcontrolapi_db_1
+	cfg.SetDefault("storage.address", "gostreamcontrolapi_db_1")
 	cfg.BindPFlag("storage.address", app.rootCmd.PersistentFlags().Lookup("storage_address"))
 
-	cfg.SetDefault("storage.name", "stream")
+	cfg.SetDefault("storage.name", "Stream")
 	cfg.BindPFlag("storage.name", app.rootCmd.PersistentFlags().Lookup("storage_name"))
 
-	cfg.SetDefault("storage.user", "testu")
-	cfg.BindPFlag("storage.user", app.rootCmd.PersistentFlags().Lookup("storage_user"))
+	cfg.SetDefault("timer.value", 1)
+	cfg.BindPFlag("timer.value", app.rootCmd.PersistentFlags().Lookup("timer_value"))
 
-	cfg.SetDefault("storage.password", "testup")
-	cfg.BindPFlag("storage.password", app.rootCmd.PersistentFlags().Lookup("storage_password"))
-
-	cfg.SetDefault("root.token", "!csdf!25")
+	cfg.SetDefault("r.t", "!csdf!25")
+	cfg.BindPFlag("r.t", app.rootCmd.PersistentFlags().Lookup("root_token"))
 
 	cfg.BindPFlag("config", app.rootCmd.PersistentFlags().Lookup("config"))
 	if cfg.GetString("config") != "" {
@@ -151,22 +143,17 @@ func (app *Application) Init() {
 		Logger.Infow("Configuration file", "path", app.cfg.ConfigFileUsed())
 	}
 
-	u := app.cfg.GetString("storage.user")
-	p := app.cfg.GetString("storage.password")
-	n := app.cfg.GetString("storage.name")
-
-	if db, ok := app.ConnectToDB(u, p, n); ok {
-		DB = db
-	}
-
 	app.listenAddr = app.cfg.GetString("server.addr")
-	app.Server = NewServer(ServerConfig{
-		address:   app.cfg.GetString("server.addr"),
-		rootToken: app.cfg.GetString("root.token"),
-		apiPrefix: app.cfg.GetString("server.apiPrefix"),
-	})
+	storage := NewMongoStorage(app.cfg.GetString("storage.address"), app.cfg.GetString("storage.name"))
+	storage.Reset()
 
-	app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
+	app.Server = NewServer(ServerConfig{
+		Address:    app.cfg.GetString("server.addr"),
+		RootToken:  app.cfg.GetString("r.t"),
+		ApiPrefix:  app.cfg.GetString("server.apiPrefix"),
+		TimerValue: app.cfg.GetInt("timer.value"),
+		Storage:    storage,
+	})
 }
 
 func (app *Application) InitWithConfig(cfg map[string]interface{}) {
@@ -183,36 +170,17 @@ func (app *Application) InitWithConfig(cfg map[string]interface{}) {
 		app.cfg.Set(key, value)
 	}
 
-	u := app.cfg.GetString("storage.user")
-	p := app.cfg.GetString("storage.password")
-	n := app.cfg.GetString("storage.name")
-
-	if db, ok := app.ConnectToDB(u, p, n); ok {
-		DB = db
-	}
-
 	app.listenAddr = app.cfg.GetString("server.addr")
+	storage := NewMongoStorage(app.cfg.GetString("storage.address"), app.cfg.GetString("storage.name"))
+	storage.Reset()
+
 	app.Server = NewServer(ServerConfig{
-		address:   app.cfg.GetString("server.addr"),
-		rootToken: app.cfg.GetString("root.token"),
-		apiPrefix: app.cfg.GetString("server.apiPrefix"),
+		Address:    app.cfg.GetString("server.addr"),
+		RootToken:  app.cfg.GetString("r.t"),
+		ApiPrefix:  app.cfg.GetString("server.apiPrefix"),
+		TimerValue: app.cfg.GetInt("timer.value"),
+		Storage:    storage,
 	})
-
-	app.Server.Timer = time.NewTimer(time.Second * time.Duration(app.timerValue))
-}
-
-func (app *Application) ConnectToDB(user, password, nameDB string) (*sql.DB, bool) {
-	dbinfo := fmt.Sprintf("user=%s password=%s dbname=%s port=5432 sslmode=disable",
-		user,
-		password,
-		nameDB)
-
-	d, err := sql.Open("postgres", dbinfo)
-	if err != nil {
-		Logger.Debugw("Connection DB refused please check params")
-		return nil, false
-	}
-	return d, true
 }
 
 func (app *Application) Run() {
