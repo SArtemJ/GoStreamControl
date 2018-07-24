@@ -4,5 +4,8 @@ server.addr: "0.0.0.0:8888"
 server.apiPrefix: "/api/v1/"
 storage.address: "localhost"
 storage.name: "stream"
+#время ожидания
+#если stream переключили в состояние interruped после истечения timer.value в минутах
+#stream переводится в состояние finished
 timer.value: 1
 r.t: "!)asd!567z"
