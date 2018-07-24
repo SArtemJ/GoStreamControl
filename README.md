@@ -5,17 +5,24 @@ API для управления stream
 ```
 #запуск на локальной машине localhost:8888 
 #запуск в docker 0.0.0.0:8888
+
 server.addr: "0.0.0.0:8888"
 server.apiPrefix: "/api/v1/"
+
 #запуск на локальной машине localhost
 #запуск в docker gostreamcontrolapi_db_1
+
 storage.address: "gostreamcontrolapi_db_1"
 storage.name: "Stream"
+
 #время ожидания
 #если stream переключили в состояние interruped после истечения timer.value в минутах
 #stream переводится в состояние finished
+
 timer.value: 1
+
 #root token для удаления stream
+
 r.t: "!)asd!567z"
 ```
 
